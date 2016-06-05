@@ -7,29 +7,27 @@ use League\Flysystem\Filesystem;
 
 class Pdf
 {
-    const DEFAULT_UTILITY_PATH = '/usr/local/bin/wkhtmltopdf';
+    const DEFAULT_BIN_PATH = '/usr/local/bin/wkhtmltopdf';
+    const TMP_FILE_PREFIX = 'tmp_wkhtmltopdf_';
 
     /** @var string */
-    protected $binUtilityPath;
-    /** @var string */
-    protected $path;
-
-    /** @var array */
-    protected $params;
-    /** @var mixed */
-    protected $pdfContent;
-    /** @var string */
-    protected $htmlContent;
-
+    protected $binary;
     /** @var string */
     protected $fileName;
     /** @var string */
-    protected $tmpDirectory;
+    protected $tmpDir;
+    /** @var string */
+    protected $path;
+    /** @var array */
+    protected $commandOptions = [];
+
+    /** @var mixed */
+    protected $content;
 
     /** @var Filesystem */
     protected $fileSystem;
 
-    protected $availableParams = [
+    protected $availableCommandOptions = [
         'grayscale', 'orientation', 'page-size',
         'lowquality', 'dpi', 'image-dpi', 'image-quality',
         'margin-bottom', 'margin-left', 'margin-right', 'margin-top',
@@ -42,12 +40,11 @@ class Pdf
         'header-spacing', 'print-media-type', 'zoom'
     ];
 
-    public function __construct($utilityPath = null, $fileStorageAdapter = null)
+    public function __construct($binary = null, $fileStorageAdapter = null)
     {
-        $this->binUtilityPath = is_string($utilityPath) ? $utilityPath : self::DEFAULT_UTILITY_PATH;
-        $this->fileName = (string)microtime(true);
-        $this->tmpDirectory = sys_get_temp_dir();
-        $this->params = [];
+        $this->binary = is_string($binary) ? $binary : self::DEFAULT_BIN_PATH;
+        $this->fileName = uniqid(self::TMP_FILE_PREFIX);
+        $this->tmpDir = sys_get_temp_dir();
 
         if ($fileStorageAdapter instanceof AdapterInterface) {
             $this->setFileStorageAdapter($fileStorageAdapter);
@@ -57,83 +54,88 @@ class Pdf
     public function setFileStorageAdapter(AdapterInterface $fileStorageAdapter)
     {
         $this->fileSystem = new Filesystem($fileStorageAdapter);
+        return $this;
     }
 
     public function loadHtml($content)
     {
         $htmlPath = $this->getHtmlPath();
         file_put_contents($htmlPath, $content);
-        return $this->setPath($htmlPath);
+        return $this->setInputPath($htmlPath);
     }
 
     public function loadFromUrl($url)
     {
-        return $this->setPath($url);
+        return $this->setInputPath($url);
     }
 
     public function loadFromHtmlFile($path)
     {
-        return $this->setPath($path);
+        return $this->setInputPath($path);
     }
 
-    public function generate()
+    /**
+     * @return $this
+     * @throws PdfException
+     */
+    public function create()
     {
         $processTerminationStatus = $this->executeCommand($output);
         if ($processTerminationStatus !== 0) {
-            throw new PdfException('Error on pdf file generation');
+            throw new PdfException(sprintf('Error on pdf file creation: %s', $output));
         }
-
-        $this->pdfContent = $this->getPdfContents();
-        $this->removeTemporaryFiles();
+        $tmpPdfPath = $this->getPdfPath();
+        if (file_exists($tmpPdfPath) && filesize($tmpPdfPath) > 0) {
+            $this->content = file_get_contents($tmpPdfPath);
+            $this->removeTmpFiles();
+        } else {
+            throw new PdfException('Error on pdf file creation');
+        }
         return $this;
     }
 
+    /**
+     * @param string $fileName
+     * @param bool $overwrite
+     * @return $this
+     */
     public function save($fileName, $overwrite = false)
     {
+        $content = $this->getContent();
         $method = $overwrite ? 'put' : 'write';
-        call_user_func_array([$this->fileSystem, $method], [$fileName, $this->getPdfContent()]);
+        call_user_func_array([$this->fileSystem, $method], [$fileName, $content]);
         return $this;
-    }
-
-    public function getPdfContents()
-    {
-        return file_get_contents($this->getPdfPath());
     }
 
     public function __call($method, $args)
     {
-        $param = $this->methodToParam($method);
-        if (!in_array($param, $this->availableParams)) {
-            throw new PdfException('Invalid option name');
+        $option = ltrim(strtolower(preg_replace('/[A-Z]/', '-$0', $method)), '-');
+        if (!in_array($option, $this->availableCommandOptions)) {
+            throw new PdfException('Invalid command option name');
         }
 
         if (isset($args[0]) && !empty($args[0])) {
-            $this->params[$param] = $args[0];
+            $this->commandOptions[$option] = $args[0];
         } else {
-            $this->params[] = $args[0];
+            $this->commandOptions[] = $args[0];
         }
         return $this;
     }
 
-    protected function methodToParam($method)
+    protected function getContent()
     {
-        return ltrim(strtolower(preg_replace('/[A-Z]/', '-$0', $method)), '-');
-    }
-
-    protected function getPdfContent()
-    {
-        if ($this->pdfContent === null) {
-            $this->generate();
+        if ($this->content === null) {
+            $this->create();
         }
-        return $this->pdfContent;
+        return $this->content;
     }
 
     protected function executeCommand(&$output)
     {
-        if (!file_exists($this->binUtilityPath)) {
+        if (!file_exists($this->binary)) {
             throw new PdfException('Invalid binary utility path');
         }
-        if(!is_executable($this->binUtilityPath)) {
+        if(!is_executable($this->binary)) {
             throw new PdfException('Binary utility is not executable');
         }
 
@@ -143,7 +145,7 @@ class Pdf
             ['pipe', 'w'],
         ];
 
-        $command = sprintf('%s %s %s %s', $this->binUtilityPath, $this->getParams(), $this->getInputPath(), $this->getPdfPath());
+        $command = sprintf('%s %s %s %s', $this->binary, $this->getCommandOptions(), $this->getInputPath(), $this->getPdfPath());
 
         $process = proc_open($command, $descriptors, $pipes);
         list($stdIn, $stdOut, $stdError) = $pipes;
@@ -165,16 +167,13 @@ class Pdf
         return $this->path;
     }
 
-    protected function setPath($path)
+    protected function setInputPath($path)
     {
-        if (!file_exists($path)) {
-            throw new PdfException('Html file does not exists');
-        }
         $this->path = $path;
         return $this;
     }
 
-    protected function removeTemporaryFiles()
+    protected function removeTmpFiles()
     {
         $pdfFilePath = $this->getPdfPath();
         if (file_exists($pdfFilePath)) {
@@ -186,22 +185,25 @@ class Pdf
         }
     }
 
-    protected function getParams()
+    /**
+     * @return string
+     */
+    protected function getCommandOptions()
     {
-        $params = [];
-        foreach ($this->params as $key => $value) {
-            $params[] = is_numeric($key) ? '--' . $value : sprintf('--%s "%s"', $key, $value);
+        $options = [];
+        foreach ($this->commandOptions as $key => $value) {
+            $options[] = is_numeric($key) ? '--' . $value : sprintf('--%s "%s"', $key, $value);
         }
-        return implode(' ', $params);
+        return implode(' ', $options);
     }
 
     protected function getHtmlPath()
     {
-        return $this->tmpDirectory . DIRECTORY_SEPARATOR . $this->fileName . '.html';
+        return $this->tmpDir . DIRECTORY_SEPARATOR . $this->fileName . '.html';
     }
 
     protected function getPdfPath()
     {
-        return $this->tmpDirectory . DIRECTORY_SEPARATOR . $this->fileName . '.pdf';
+        return $this->tmpDir . DIRECTORY_SEPARATOR . $this->fileName . '.pdf';
     }
 }
