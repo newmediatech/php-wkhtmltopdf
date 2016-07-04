@@ -75,7 +75,7 @@ class Pdf
     }
 
     /**
-     * @return $this
+     * @return Pdf
      * @throws PdfException
      */
     public function create()
@@ -97,7 +97,7 @@ class Pdf
     /**
      * @param string $fileName
      * @param bool $overwrite
-     * @return $this
+     * @return Pdf
      */
     public function save($fileName, $overwrite = false)
     {
@@ -199,11 +199,11 @@ class Pdf
 
     protected function getHtmlPath()
     {
-        return $this->tmpDir . DIRECTORY_SEPARATOR . $this->fileName . '.html';
+        return $this->tmpDir . '/' . $this->fileName . '.html';
     }
 
     protected function getPdfPath()
     {
-        return $this->tmpDir . DIRECTORY_SEPARATOR . $this->fileName . '.pdf';
+        return $this->tmpDir . '/' . $this->fileName . '.pdf';
     }
 }

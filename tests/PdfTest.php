@@ -30,7 +30,7 @@ class PdfTest extends \PHPUnit_Framework_TestCase
         $this->assertAttributeInstanceOf('League\\Flysystem\\Filesystem', 'fileSystem', $pdf);
     }
 
-    protected function call($object, $method, $args = [])
+    private function callMethod($object, $method, $args = [])
     {
         $method = new \ReflectionMethod($object, $method);
         $method->setAccessible(true);

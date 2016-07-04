@@ -1,16 +1,10 @@
 {
-  "name": "newmediatech/php-wkhtmltopdf",
-  "description": "Yet another HTML to PDF Converter based on wkhtmltopdf",
-  "keywords": ["pdf","pdf converter", "html to pdf", "wkhtmltopdf"],
+  "name": "mediatech/php-wkhtmltopdf",
+  "description": "PHP HTML to PDF Converter based on wkhtmltopdf",
+  "keywords": ["pdf", "pdf converter", "html to pdf", "wkhtmltopdf"],
   "license": "MIT",
-  "authors": [
-    {
-      "name": "Alexandr Ivanov",
-      "email": "misantron@gmail.com"
-    }
-  ],
   "require": {
-    "php": ">=5.4",
+    "php": ">=5.5",
     "league/flysystem": "~1.0"
   },
   "require-dev": {
