@@ -2,9 +2,6 @@
 
 namespace Converter;
 
-use League\Flysystem\AdapterInterface;
-use League\Flysystem\Filesystem;
-
 class Pdf
 {
     const DEFAULT_BIN_PATH = '/usr/local/bin/wkhtmltopdf';
@@ -24,9 +21,6 @@ class Pdf
     /** @var mixed */
     protected $content;
 
-    /** @var Filesystem */
-    protected $fileSystem;
-
     protected $availableCommandOptions = [
         'grayscale', 'orientation', 'page-size',
         'lowquality', 'dpi', 'image-dpi', 'image-quality',
@@ -40,21 +34,11 @@ class Pdf
         'header-spacing', 'print-media-type', 'zoom'
     ];
 
-    public function __construct($binary = null, $fileStorageAdapter = null)
+    public function __construct($binary = null)
     {
         $this->binary = is_string($binary) ? $binary : self::DEFAULT_BIN_PATH;
         $this->fileName = uniqid(self::TMP_FILE_PREFIX);
         $this->tmpDir = sys_get_temp_dir();
-
-        if ($fileStorageAdapter instanceof AdapterInterface) {
-            $this->setFileStorageAdapter($fileStorageAdapter);
-        }
-    }
-
-    public function setFileStorageAdapter(AdapterInterface $fileStorageAdapter)
-    {
-        $this->fileSystem = new Filesystem($fileStorageAdapter);
-        return $this;
     }
 
     public function loadHtml($content)
@@ -96,15 +80,16 @@ class Pdf
 
     /**
      * @param string $fileName
-     * @param bool $overwrite
-     * @return Pdf
+     * @return bool
      */
-    public function save($fileName, $overwrite = false)
+    public function save($fileName)
     {
         $content = $this->getContent();
-        $method = $overwrite ? 'put' : 'write';
-        call_user_func_array([$this->fileSystem, $method], [$fileName, $content]);
-        return $this;
+        $size = file_put_contents($fileName, $content, LOCK_EX);
+        if ($size === false) {
+            return false;
+        }
+        return true;
     }
 
     public function __call($method, $args)

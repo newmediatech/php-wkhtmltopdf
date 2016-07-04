@@ -4,11 +4,10 @@
   "keywords": ["pdf", "pdf converter", "html to pdf", "wkhtmltopdf"],
   "license": "MIT",
   "require": {
-    "php": ">=5.5",
-    "league/flysystem": "~1.0"
+    "php": ">=5.5"
   },
   "require-dev": {
-    "phpunit/phpunit": "~4.4"
+    "phpunit/phpunit": "~4.7"
   },
   "autoload": {
     "psr-4": {
