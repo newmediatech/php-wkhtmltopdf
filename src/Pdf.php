@@ -1,14 +1,14 @@
 <?php
 
-namespace Converter;
+namespace MediaTech;
 
 class Pdf
 {
-    const DEFAULT_BIN_PATH = '/usr/local/bin/wkhtmltopdf';
+    const DEFAULT_COMMAND_PATH = '/usr/local/bin/wkhtmltopdf';
     const TMP_FILE_PREFIX = 'tmp_wkhtmltopdf_';
 
     /** @var string */
-    protected $binary;
+    protected $command;
     /** @var string */
     protected $fileName;
     /** @var string */
@@ -34,11 +34,17 @@ class Pdf
         'header-spacing', 'print-media-type', 'zoom'
     ];
 
-    public function __construct($binary = null)
+    public function __construct($path = null)
     {
-        $this->binary = is_string($binary) ? $binary : self::DEFAULT_BIN_PATH;
+        $this->command = is_string($path) ? $path : self::DEFAULT_COMMAND_PATH;
         $this->fileName = uniqid(self::TMP_FILE_PREFIX);
         $this->tmpDir = sys_get_temp_dir();
+    }
+
+    public function setCommandPath($path)
+    {
+        $this->command = $path;
+        return $this;
     }
 
     public function loadHtml($content)
@@ -48,12 +54,12 @@ class Pdf
         return $this->setInputPath($htmlPath);
     }
 
-    public function loadFromUrl($url)
+    public function loadHtmlFromUrl($url)
     {
         return $this->setInputPath($url);
     }
 
-    public function loadFromHtmlFile($path)
+    public function loadHtmlFromFile($path)
     {
         return $this->setInputPath($path);
     }
@@ -117,10 +123,10 @@ class Pdf
 
     protected function executeCommand(&$output)
     {
-        if (!file_exists($this->binary)) {
+        if (!file_exists($this->command)) {
             throw new PdfException('Invalid binary utility path');
         }
-        if(!is_executable($this->binary)) {
+        if(!is_executable($this->command)) {
             throw new PdfException('Binary utility is not executable');
         }
 
@@ -130,7 +136,7 @@ class Pdf
             ['pipe', 'w'],
         ];
 
-        $command = sprintf('%s %s %s %s', $this->binary, $this->getCommandOptions(), $this->getInputPath(), $this->getPdfPath());
+        $command = sprintf('%s %s %s %s', $this->command, $this->getCommandOptions(), $this->getInputPath(), $this->getPdfPath());
 
         $process = proc_open($command, $descriptors, $pipes);
         list($stdIn, $stdOut, $stdError) = $pipes;

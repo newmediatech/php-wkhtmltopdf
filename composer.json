@@ -1,7 +1,8 @@
 {
   "name": "mediatech/php-wkhtmltopdf",
-  "description": "PHP HTML to PDF Converter based on wkhtmltopdf",
+  "description": "A PHP wrapper interface to wkhtmltopdf command tool",
   "keywords": ["pdf", "pdf converter", "html to pdf", "wkhtmltopdf"],
+  "type": "library",
   "license": "MIT",
   "require": {
     "php": ">=5.5"
@@ -11,12 +12,17 @@
   },
   "autoload": {
     "psr-4": {
-      "Converter\\": "src/"
+      "MediaTech\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Converter\\Tests\\": "tests/"
+      "MediaTech\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-master": "1.0.x-dev"
     }
   }
 }

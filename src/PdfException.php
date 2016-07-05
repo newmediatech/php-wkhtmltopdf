@@ -1,6 +1,6 @@
 <?php
 
-namespace Converter;
+namespace MediaTech;
 
 class PdfException extends \Exception
 {
