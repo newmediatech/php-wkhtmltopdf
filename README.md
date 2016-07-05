@@ -1,6 +1,7 @@
 # PHP WkHtmlToPdf - interface to wkhtmltopdf command
 
-[![Packagist](https://img.shields.io/packagist/v/mediatech/php-wkhtmltopdf.svg?maxAge=2592000)]() [![License](https://img.shields.io/packagist/l/mediatech/php-wkhtmltopdf.svg?maxAge=2592000)]()
+[![Packagist](https://img.shields.io/packagist/v/mediatech/php-wkhtmltopdf.svg?style=flat-square&maxAge=2592000)]()
+[![License](https://img.shields.io/packagist/l/mediatech/php-wkhtmltopdf.svg?style=flat-square&maxAge=2592000)]()
 
 PHP WkHtmlToPdf provides OOP interface to ease PDF creation from HTML contents using [wkhtmltopdf](http://wkhtmltopdf.org) command tool.  
 The **wkhtmltopdf** command tool must be installed previously on your server.
