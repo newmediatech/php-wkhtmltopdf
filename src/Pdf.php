@@ -21,7 +21,7 @@ class Pdf
     /** @var mixed */
     protected $content;
 
-    protected $availableCommandOptions = [
+    private $availableCommandOptions = [
         'grayscale', 'orientation', 'page-size',
         'lowquality', 'dpi', 'image-dpi', 'image-quality',
         'margin-bottom', 'margin-left', 'margin-right', 'margin-top',
@@ -31,14 +31,15 @@ class Pdf
         'footer-font-size', 'footer-html', 'footer-left', 'footer-line',
         'footer-right', 'footer-spacing', 'header-center', 'header-font-name',
         'header-font-size', 'header-html', 'header-left', 'header-line', 'header-right',
-        'header-spacing', 'print-media-type', 'zoom'
+        'header-spacing', 'print-media-type', 'zoom', 'javascript-delay', 'no-stop-slow-scripts',
     ];
 
-    public function __construct($path = null)
+    public function __construct($path = null, $tmpDir = null)
     {
-        $this->command = is_string($path) ? $path : self::DEFAULT_COMMAND_PATH;
+        $this->command = $path ?: self::DEFAULT_COMMAND_PATH;
+        $this->tmpDir = $tmpDir ?: sys_get_temp_dir();
+
         $this->fileName = uniqid(self::TMP_FILE_PREFIX);
-        $this->tmpDir = sys_get_temp_dir();
     }
 
     public function setCommandPath($path)
@@ -50,7 +51,9 @@ class Pdf
     public function loadHtml($content)
     {
         $htmlPath = $this->getHtmlPath();
-        file_put_contents($htmlPath, $content);
+        if (file_put_contents($htmlPath, $content) === false) {
+            throw new \RuntimeException('Unable to create html file from content');
+        }
         return $this->setInputPath($htmlPath);
     }
 
@@ -66,21 +69,22 @@ class Pdf
 
     /**
      * @return Pdf
-     * @throws PdfException
      */
     public function create()
     {
+        $this->getInputPath();
+
         $processTerminationStatus = $this->executeCommand($output);
         if ($processTerminationStatus !== 0) {
-            throw new PdfException(sprintf('Error on pdf file creation: %s', $output));
+            throw new \RuntimeException(sprintf('Error on pdf file creation: %s', $output));
         }
         $tmpPdfPath = $this->getPdfPath();
-        if (file_exists($tmpPdfPath) && filesize($tmpPdfPath) > 0) {
-            $this->content = file_get_contents($tmpPdfPath);
-            $this->removeTmpFiles();
-        } else {
-            throw new PdfException('Error on pdf file creation');
+        if (!file_exists($tmpPdfPath) || filesize($tmpPdfPath) === 0) {
+            throw new \RuntimeException('Error on pdf file creation');
         }
+        $this->content = file_get_contents($tmpPdfPath);
+        $this->removeTmpFiles();
+
         return $this;
     }
 
@@ -102,13 +106,13 @@ class Pdf
     {
         $option = ltrim(strtolower(preg_replace('/[A-Z]/', '-$0', $method)), '-');
         if (!in_array($option, $this->availableCommandOptions)) {
-            throw new PdfException('Invalid command option name');
+            throw new \InvalidArgumentException('Invalid command option name');
         }
 
         if (isset($args[0]) && !empty($args[0])) {
             $this->commandOptions[$option] = $args[0];
         } else {
-            $this->commandOptions[] = $args[0];
+            $this->commandOptions[] = $option;
         }
         return $this;
     }
@@ -123,13 +127,6 @@ class Pdf
 
     protected function executeCommand(&$output)
     {
-        if (!file_exists($this->command)) {
-            throw new PdfException('Invalid binary utility path');
-        }
-        if(!is_executable($this->command)) {
-            throw new PdfException('Binary utility is not executable');
-        }
-
         $descriptors = [
             ['pipe', 'r'],
             ['pipe', 'w'],
@@ -153,7 +150,7 @@ class Pdf
     protected function getInputPath()
     {
         if ($this->path === null) {
-            throw new PdfException('Input source path is not set');
+            throw new \RuntimeException('Input source path is not set');
         }
         return $this->path;
     }
@@ -185,7 +182,7 @@ class Pdf
         foreach ($this->commandOptions as $key => $value) {
             $options[] = is_numeric($key) ? '--' . $value : sprintf('--%s "%s"', $key, $value);
         }
-        return implode(' ', $options);
+        return sizeof($options) > 0 ? implode(' ', $options) : '';
     }
 
     protected function getHtmlPath()
