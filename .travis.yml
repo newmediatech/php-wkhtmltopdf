@@ -1,0 +1,30 @@
+language: php
+
+dist: trusty
+
+php:
+  - 5.6
+  - 7.0
+  - 7.1
+  - 7.2
+
+cache:
+  directories:
+    - vendor
+    - $HOME/.composer/cache
+
+install:
+  - sudo apt-get update && apt-get install -y build-essential locales xorg-dev libssl-dev wget curl
+  - sudo wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz
+  - sudo tar xf wkhtmltox-0.12.4_linux-generic-amd64.tar.xz
+  - sudo mv wkhtmltox/bin/* /usr/local/bin
+  - travis_retry composer self-update && composer --version
+  - export PATH="$HOME/.composer/vendor/bin:$PATH"
+  - travis_retry composer install --prefer-dist --no-interaction
+
+script:
+  - vendor/bin/phpunit --verbose --coverage-clover=coverage.clover
+
+after_script:
+  - wget https://scrutinizer-ci.com/ocular.phar
+  - php ocular.phar code-coverage:upload --format=php-clover coverage.clover

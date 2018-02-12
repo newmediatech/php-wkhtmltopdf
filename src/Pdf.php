@@ -2,38 +2,96 @@
 
 namespace MediaTech;
 
+/**
+ * Class Pdf
+ * @package MediaTech
+ */
 class Pdf
 {
     const DEFAULT_COMMAND_PATH = '/usr/local/bin/wkhtmltopdf';
     const TMP_FILE_PREFIX = 'tmp_wkhtmltopdf_';
 
-    /** @var string */
+    /**
+     * @var string
+     */
     protected $command;
-    /** @var string */
+
+    /**
+     * @var string
+     */
     protected $fileName;
-    /** @var string */
+
+    /**
+     * @var string
+     */
     protected $tmpDir;
-    /** @var string */
+
+    /**
+     * @var string
+     */
     protected $path;
-    /** @var array */
+
+    /**
+     * @var array
+     */
     protected $commandOptions = [];
 
-    /** @var mixed */
+    /**
+     * @var mixed
+     */
     protected $content;
 
+    /**
+     * @var array
+     */
     private $availableCommandOptions = [
-        'grayscale', 'orientation', 'page-size',
-        'lowquality', 'dpi', 'image-dpi', 'image-quality',
-        'margin-bottom', 'margin-left', 'margin-right', 'margin-top',
-        'page-height', 'page-width', 'no-background', 'encoding', 'enable-forms',
-        'no-images', 'disable-internal-links', 'disable-javascript',
-        'password', 'username', 'footer-center', 'footer-font-name',
-        'footer-font-size', 'footer-html', 'footer-left', 'footer-line',
-        'footer-right', 'footer-spacing', 'header-center', 'header-font-name',
-        'header-font-size', 'header-html', 'header-left', 'header-line', 'header-right',
-        'header-spacing', 'print-media-type', 'zoom', 'javascript-delay', 'no-stop-slow-scripts',
+        'grayscale',
+        'orientation',
+        'page-size',
+        'lowquality',
+        'dpi',
+        'image-dpi',
+        'image-quality',
+        'margin-bottom',
+        'margin-left',
+        'margin-right',
+        'margin-top',
+        'page-height',
+        'page-width',
+        'no-background',
+        'encoding',
+        'enable-forms',
+        'no-images',
+        'disable-internal-links',
+        'disable-javascript',
+        'password',
+        'username',
+        'footer-center',
+        'footer-font-name',
+        'footer-font-size',
+        'footer-html',
+        'footer-left',
+        'footer-line',
+        'footer-right',
+        'footer-spacing',
+        'header-center',
+        'header-font-name',
+        'header-font-size',
+        'header-html',
+        'header-left',
+        'header-line',
+        'header-right',
+        'header-spacing',
+        'print-media-type',
+        'zoom',
+        'javascript-delay',
+        'no-stop-slow-scripts',
     ];
 
+    /**
+     * @param string|null $path
+     * @param string|null $tmpDir
+     */
     public function __construct($path = null, $tmpDir = null)
     {
         $this->command = $path ?: self::DEFAULT_COMMAND_PATH;
@@ -133,7 +191,9 @@ class Pdf
             ['pipe', 'w'],
         ];
 
-        $command = sprintf('%s %s %s %s', $this->command, $this->getCommandOptions(), $this->getInputPath(), $this->getPdfPath());
+        $command = sprintf('%s %s %s %s',
+            $this->command, $this->getCommandOptions(), $this->getInputPath(), $this->getPdfPath()
+        );
 
         $process = proc_open($command, $descriptors, $pipes);
         list($stdIn, $stdOut, $stdError) = $pipes;

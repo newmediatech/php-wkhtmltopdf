@@ -14,11 +14,6 @@ class PdfTest extends \PHPUnit_Framework_TestCase
         $this->pdf = new Pdf();
     }
 
-    protected function tearDown()
-    {
-        \Mockery::close();
-    }
-
     public function testDefaultConstructor()
     {        
         $this->assertAttributeEquals(Pdf::DEFAULT_COMMAND_PATH, 'command', $this->pdf);
